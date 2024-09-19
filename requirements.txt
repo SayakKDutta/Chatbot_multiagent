@@ -1,10 +1,12 @@
 streamlit
 langchain
 protobuf==3.20.3
-langchain-community
+langchain-community==0.3.1
 openai
 chromadb
 tiktoken
 toml
 pysqlite3-binary
+
+!pip install -U langchain-community
 
