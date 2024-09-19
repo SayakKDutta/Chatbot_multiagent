@@ -1,10 +1,12 @@
 import streamlit as st
 from langchain.chat_models import ChatOpenAI
 
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-import chromadb
+st.set_page_config(layout="wide")
+st.title("EmployeeChat")
+with st.sidebar:
+    API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
+
+
 
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
@@ -13,7 +15,10 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.chat_models import ChatOpenAI
 import os
 
-
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+import chromadb
 
 # Initialize your OpenAI client and Chroma store
 os.environ['OPENAI_API_KEY'] = 'your-openai-api-key'
