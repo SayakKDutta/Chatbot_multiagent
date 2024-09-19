@@ -8,5 +8,3 @@ tiktoken
 toml
 pysqlite3-binary
 
-!pip install -U langchain-community
-
