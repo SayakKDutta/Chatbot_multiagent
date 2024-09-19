@@ -9,4 +9,5 @@ openai
 chromadb
 tiktoken
 toml
+pysqlite3-binary
 
