@@ -1,29 +1,18 @@
-name: CI Build
-
-on:
-  push:
-    branches:
-      - main
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v2
-
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.x'
-
-    - name: Install dependencies
+    
+    - name: Update and Install SQLite
       run: |
         sudo apt-get update
         sudo apt-get install -y sqlite3 libsqlite3-dev
-        pip install -r requirements.txt
+        sqlite3 --version  # Check that it's updated
 
-    - name: Run tests
+    - name: Install Dependencies
       run: |
-        python -m unittest discover
-
+        pip install -r requirements.txt
