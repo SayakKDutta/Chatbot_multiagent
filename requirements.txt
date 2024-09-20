@@ -1,4 +1,3 @@
-streamlit
 langchain-community==0.3.0
 openai
 chromadb
@@ -6,7 +5,10 @@ tiktoken
 toml
 pysqlite3-binary
 protobuf==3.20.3
-pydantic<2.0.0
+
 langchain<0.4.0
+
+streamlit==1.38.0
+pydantic>=2.7.4
 
 
