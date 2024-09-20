@@ -13,6 +13,8 @@ import pprint
 st.set_page_config(layout="wide")
 st.title("EmployeeChat")
 
+with st.sidebar:
+    API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
 # Fix for SQLite - pysqlite3 import
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
