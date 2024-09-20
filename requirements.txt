@@ -1,14 +1,10 @@
-langchain-community
+tiktoken
 openai
 chromadb
-tiktoken
-google-cloud-storage
-pysqlite3-binary
-protobuf==3.20.3
-sqlite3
-langchain<0.4.0
+langchain
 streamlit
-pydantic>=2.7.4
-
+google-cloud-storage
+langchain_community
+pysqlite3-binary
 
 
