@@ -5,6 +5,8 @@ chromadb
 tiktoken
 toml
 pysqlite3-binary
-protobuf==3.19.0  
+protobuf==3.20.3
+pydantic<2.0.0
+langchain<0.4.0
 
 
