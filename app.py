@@ -1,23 +1,17 @@
 import os
 import sys
 import streamlit as st
+from openai import OpenAI
+st.set_page_config(layout="wide")
+st.title("Emplochat")
+with st.sidebar:
+    API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-from openai import OpenAI
 import pprint
-
-# Initialize Streamlit page config
-st.set_page_config(layout="wide")
-st.title("EmployeeChat")
-
-with st.sidebar:
-    API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
-# Fix for SQLite - pysqlite3 import
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import chromadb
 
 
