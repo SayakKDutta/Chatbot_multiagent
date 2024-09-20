@@ -1,4 +1,5 @@
 streamlit
+langchain
 langchain-community==0.3.0
 openai
 chromadb
