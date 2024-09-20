@@ -22,11 +22,9 @@ st.title("EmployeeChat")
 with st.sidebar:
     API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
 
-# Set OpenAI API Key
-os.environ['OPENAI_API_KEY'] = API_KEY
 
 # Initialize the OpenAI client and Chroma store
-client = ChatOpenAI(api_key=os.getenv('sk-EWFdsirP3FNTab8ra8jY8xeH9QwW83JVnv5ymNcgNJT3BlbkFJ_nrHnECzXCuIOk9s3actPyxZLzmtcRn2ThmTHkuhIA'))
+client = ChatOpenAI(api_key=API_KEY) 
 embed_prompt = OpenAIEmbeddings()
 
 persist_directory = "/mount/src/Chatbot_multiagent/embeddings/"
