@@ -24,7 +24,7 @@ with st.sidebar:
 
 
 # Initialize the OpenAI client and Chroma store
-client = ChatOpenAI(api_key=API_KEY) 
+client = OpenAI(api_key=API_KEY)
 embed_prompt = OpenAIEmbeddings()
 
 persist_directory = "/mount/src/Chatbot_multiagent/embeddings/"
