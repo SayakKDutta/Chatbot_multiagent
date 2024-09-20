@@ -24,13 +24,15 @@ with st.sidebar:
     API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
 
 # Initialize the OpenAI client and Chroma store
-client = OpenAI(api_key=API_KEY)
+#client = OpenAI(api_key=API_KEY)
 
 # Pass the API key to OpenAIEmbeddings
-embed_prompt = OpenAIEmbeddings(openai_api_key=API_KEY)
+#embed_prompt = OpenAIEmbeddings(openai_api_key=API_KEY)
 
+client = OpenAI(api_key=API_KEY)   
 
 persist_directory = "/mount/src/Chatbot_multiagent/embeddings/"
+#########################Loading the Stored Vector embeddings################
 #Initialize the Chroma DB client
 store = Chroma(persist_directory=persist_directory,collection_name="Capgemini_policy_embeddings")
 
