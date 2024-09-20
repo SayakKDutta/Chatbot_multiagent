@@ -29,8 +29,14 @@ client = OpenAI(api_key=API_KEY)
 # Pass the API key to OpenAIEmbeddings
 embed_prompt = OpenAIEmbeddings(openai_api_key=API_KEY)
 
+
 persist_directory = "/mount/src/Chatbot_multiagent/embeddings/"
-store = Chroma(persist_directory=persist_directory, collection_name="Capgemini_policy_embeddings")
+#Initialize the Chroma DB client
+store = Chroma(persist_directory=persist_directory,collection_name="Capgemini_policy_embeddings")
+
+# Get all embeddings
+embeddings = store.get(include=['embeddings'])
+embed_prompt = OpenAIEmbeddings()
 
 # Function to retrieve from the vector database
 def retrieve_vector_db(query, n_results=3):
