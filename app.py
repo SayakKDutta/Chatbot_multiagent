@@ -29,7 +29,7 @@ os.environ['OPENAI_API_KEY'] = API_KEY
 client = ChatOpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 embed_prompt = OpenAIEmbeddings()
 
-persist_directory = "/content/gdrive/MyDrive/data_backup"
+persist_directory = "/mount/src/Chatbot_multiagent/embeddings/"
 store = Chroma(persist_directory=persist_directory, collection_name="Capgemini_policy_embeddings")
 
 # Function to retrieve from the vector database
