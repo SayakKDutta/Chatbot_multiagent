@@ -1,9 +1,10 @@
 streamlit
-langchain
 langchain-community==0.3.0
 openai
 chromadb
 tiktoken
 toml
 pysqlite3-binary
+protobuf==3.19.0  
+
 
