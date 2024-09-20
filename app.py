@@ -9,29 +9,23 @@ from langchain.prompts import PromptTemplate
 from openai import OpenAI
 import pprint
 
-# Set the environment variable to avoid protocol buffer issue
-os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
-
-# Fix for SQLite - pysqlite3 import
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-
 # Initialize Streamlit page config
 st.set_page_config(layout="wide")
 st.title("EmployeeChat")
 
-with st.sidebar:
-    API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
+# Fix for SQLite - pysqlite3 import
+__import__('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+import chromadb
 
-# Initialize the OpenAI client and Chroma store
-#client = OpenAI(api_key=API_KEY)
 
-# Pass the API key to OpenAIEmbeddings
-#embed_prompt = OpenAIEmbeddings(openai_api_key=API_KEY)
+###Enivironment settings for openai API key and Vector Embeddings############
+
+
 
 client = OpenAI(api_key=API_KEY)   
+persist_directory = "/mount/src/Chatbot_multiagent/embeddings"
 
-persist_directory = "/mount/src/Chatbot_multiagent/embeddings/"
 #########################Loading the Stored Vector embeddings################
 #Initialize the Chroma DB client
 store = Chroma(persist_directory=persist_directory,collection_name="Capgemini_policy_embeddings")
@@ -39,6 +33,11 @@ store = Chroma(persist_directory=persist_directory,collection_name="Capgemini_po
 # Get all embeddings
 embeddings = store.get(include=['embeddings'])
 embed_prompt = OpenAIEmbeddings()
+
+###############################################################################
+
+
+
 
 # Function to retrieve from the vector database
 def retrieve_vector_db(query, n_results=3):
