@@ -33,7 +33,7 @@ store = Chroma(persist_directory=persist_directory,collection_name="Capgemini_po
 
 # Get all embeddings
 embeddings = store.get(include=['embeddings'])
-embed_prompt = OpenAIEmbeddings()
+embed_prompt = OpenAIEmbeddings(API_KEY)
 
 ###############################################################################
 
