@@ -10,7 +10,6 @@ import chromadb
 from chromadb.utils import embedding_functions
 import os
 
-
 # Streamlit App Configuration
 st.set_page_config(layout="wide")
 st.title("Emplochat")
@@ -22,12 +21,10 @@ with st.sidebar:
 # Define the embedding function
 class OpenAIEmbeddingFunction:
     def __call__(self, texts):
-        # Check and limit the input size to avoid sending too much data
         response = openai.Embedding.create(
             input=texts,
-            model="text-embedding-ada-002"  # Use the OpenAI embedding model you prefer
+            model="text-embedding-ada-002"
         )
-        # Extract embeddings from the response
         embeddings = [embedding['embedding'] for embedding in response['data']]
         return embeddings
 
@@ -42,7 +39,6 @@ class OpenAIClient:
 # Initialize the OpenAI client
 client = OpenAIClient(API_KEY)
 
-
 persist_directory = '/mount/src/Chatbot_multiagent/embeddings'
 
 # Initialize the Chroma DB client
@@ -54,7 +50,7 @@ embed_prompt = OpenAIEmbeddingFunction()
 
 # Define the embedding retrieval function
 def retrieve_vector_db(query, n_results=2):
-    embedding_vector = embed_prompt([query])[0]  # Get embedding for the query
+    embedding_vector = embed_prompt([query])[0]
     similar_embeddings = store.similarity_search_by_vector_with_relevance_scores(embedding=embedding_vector, k=n_results)
     results = []
     prev_embedding = []
@@ -111,7 +107,7 @@ if query := st.chat_input("Enter your query here?"):
 
     # Generate Normal RAG response
     with st.chat_message("assistant"):
-        stream = client.chat.completions.create(
+        stream = client.chat(
             max_tokens=1500,
             model=st.session_state["openai_model"],
             messages=[{"role": "system", "content": prompt}],
@@ -152,7 +148,7 @@ if query := st.chat_input("Enter your query here?"):
         Context : {context}
         [/INST]
         '''
-        stream_multi = client.chat.completions.create(
+        stream_multi = client.chat(
             max_tokens=1500,
             model=st.session_state["openai_model"],
             messages=[{"role": "system", "content": multi_prompt}],
