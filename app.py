@@ -10,7 +10,6 @@ import chromadb
 from chromadb.utils import embedding_functions
 import os
 
-
 # Streamlit App Configuration
 st.set_page_config(layout="wide")
 st.title("Emplochat")
@@ -41,12 +40,8 @@ class OpenAIClient:
 client = OpenAIClient(API_KEY)
 
 persist_directory = '/mount/src/Chatbot_multiagent/embeddings'
-
-# Initialize the Chroma DB client
 store = Chroma(persist_directory=persist_directory, collection_name="Capgemini_policy_embeddings")
 
-# Get all embeddings
-embeddings = store.get(include=['embeddings'])
 embed_prompt = OpenAIEmbeddingFunction()
 
 # Define the embedding retrieval function
@@ -61,19 +56,23 @@ def retrieve_vector_db(query, n_results=2):
         prev_embedding = embedding
     return results
 
-# Initialize session states for storing messages
+# Initialize session states
 if "openai_model" not in st.session_state:
     st.session_state["openai_model"] = "ft:gpt-3.5-turbo-0125:personal::A9eKNr3q"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# Display chat history
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
 # Accept user input
 if query := st.chat_input("Enter your query here?"):
     retrieved_results = retrieve_vector_db(query, n_results=3)
     context = ''.join([doc[0].page_content for doc in retrieved_results[:2]])
 
-    # Determine the specialized head based on the query content
     if "leave" in query.lower():
         head = "Leave Policy Expert"
     elif "ethics" in query.lower():
@@ -94,6 +93,13 @@ if query := st.chat_input("Enter your query here?"):
     [/INST]
     '''
 
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": query})
+
+    # Display the user message
+    with st.chat_message("user"):
+        st.markdown(query)
+
     # Generate Normal RAG response
     with st.chat_message("assistant"):
         stream = client.chat(
@@ -102,58 +108,53 @@ if query := st.chat_input("Enter your query here?"):
             messages=[{"role": "system", "content": prompt}],
             stream=True
         )
-        normal_response = st.write_stream(stream)
-        normal_response_text = ''.join(part['choices'][0]['delta']['content'] for part in normal_response)
+        normal_response = ''.join(part['choices'][0]['delta'].get('content', '') for part in stream)
 
-    # Append the assistant's Normal RAG response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": normal_response_text})
+    # Append the Normal RAG response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": normal_response})
 
-    # Check for vagueness in Normal response
+    # Check vagueness and relevance for Normal RAG
     def check_vagueness(answer):
         vague_phrases = ["I am not sure", "it depends", "vague", "uncertain", "unclear"]
         return any(phrase in answer.lower() for phrase in vague_phrases)
 
-    is_vague_normal = check_vagueness(normal_response_text)
+    is_vague_normal = check_vagueness(normal_response)
 
-    # Score the response
     def calculate_relevance_score(query, response):
         keywords = query.lower().split()
         matches = sum(1 for word in keywords if word in response.lower())
         return matches / len(keywords)
 
-    relevance_score_normal = calculate_relevance_score(query, normal_response_text)
+    relevance_score_normal = calculate_relevance_score(query, normal_response)
 
     # Generate Multi-Agent RAG response
-    multi_prompt = f'''
-    [INST]
-    You are an expert in {head}. Provide a detailed response based on the context and your training.
-
-    Question: {query}
-
-    Context : {context}
-    [/INST]
-    '''
-
     with st.chat_message("assistant"):
+        multi_prompt = f'''
+        [INST]
+        You are an expert in {head}. Provide a detailed response based on the context and your training.
+
+        Question: {query}
+
+        Context : {context}
+        [/INST]
+        '''
         stream_multi = client.chat(
             max_tokens=1500,
             model=st.session_state["openai_model"],
             messages=[{"role": "system", "content": multi_prompt}],
             stream=True
         )
-        multi_response = st.write_stream(stream_multi)
-        multi_response_text = ''.join(part['choices'][0]['delta']['content'] for part in multi_response)
+        multi_response = ''.join(part['choices'][0]['delta'].get('content', '') for part in stream_multi)
 
-    # Append the assistant's Multi-Agent RAG response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": multi_response_text})
+    # Append the Multi-Agent RAG response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": multi_response})
 
-    # Check for vagueness in Multi-Agent response
-    is_vague_multi = check_vagueness(multi_response_text)
-    relevance_score_multi = calculate_relevance_score(query, multi_response_text)
+    # Check vagueness and relevance for Multi-Agent RAG
+    is_vague_multi = check_vagueness(multi_response)
+    relevance_score_multi = calculate_relevance_score(query, multi_response)
 
-    # Display both RAG results
-    st.markdown(f"### Normal RAG Vagueness Detected: {'Yes' if is_vague_normal else 'No'}")
+    # Display RAG and Multi-Agent RAG scores and analysis
+    st.markdown(f"**Normal RAG Vagueness Detected:** {'Yes' if is_vague_normal else 'No'}")
     st.markdown(f"**Normal RAG Relevance Score:** {relevance_score_normal:.2f}")
-
-    st.markdown(f"### Multi-Agent RAG Vagueness Detected: {'Yes' if is_vague_multi else 'No'}")
+    st.markdown(f"**Multi-Agent RAG Vagueness Detected:** {'Yes' if is_vague_multi else 'No'}")
     st.markdown(f"**Multi-Agent RAG Relevance Score:** {relevance_score_multi:.2f}")
