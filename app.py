@@ -1,3 +1,4 @@
+import sys
 # Ensure compatibility with SQLite
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
@@ -9,7 +10,7 @@ from langchain_community.vectorstores import Chroma
 import chromadb
 from chromadb.utils import embedding_functions
 import os
-import sys
+
 
 
 # Initialize Chroma DB client
