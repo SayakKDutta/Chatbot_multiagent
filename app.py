@@ -37,50 +37,36 @@ embed_prompt = OpenAIEmbeddings(API_KEY)
 
 ###############################################################################
 
-
-
-
-# Function to retrieve from the vector database
-def retrieve_vector_db(query, n_results=3):
+# Define the embedding retrieval function
+def retrieve_vector_db(query, n_results=2):
     similar_embeddings = store.similarity_search_by_vector_with_relevance_scores(
-        embedding=embed_prompt.embed_query(query), k=n_results
-    )
+        embedding=embed_prompt.embed_query(query), k=n_results)
     results = []
     prev_embedding = []
-
     for embedding in similar_embeddings:
         if embedding not in prev_embedding:
             results.append(embedding)
         prev_embedding = embedding
-
     return results
 
-# Normal RAG response function
-def normal_rag_response(query, temperature=0, max_tokens=200, top_n=10):
-    retrieved_results = retrieve_vector_db(query, n_results=top_n)
+# Initialize session states for storing messages
+if "openai_model" not in st.session_state:
+    st.session_state["openai_model"] = "ft:gpt-3.5-turbo-0125:personal:fine-tune-gpt3-5-1:9AFEVLdj"
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Display chat history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Accept user input
+if query := st.chat_input("Enter your query here?"):
+    retrieved_results = retrieve_vector_db(query, n_results=3)
     context = ''.join([doc[0].page_content for doc in retrieved_results[:2]])
 
-    prompt = f'''
-    [INST]
-    Give an answer for the question based on the context provided and also on what you have been trained on.
-    Question: {query}
-    Context: {context}
-    [/INST]
-    '''
-
-    completion = client.completions.create(
-        temperature=temperature,
-        max_tokens=max_tokens,
-        model="ft:gpt-3.5-turbo-0125:personal:fine-tune-gpt3-5-1:9AFEVLdj",
-        messages=[
-            {"role": "system", "content": "You are an expert in Capgemini policies."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return completion.choices[0].message.content
-
-# Multi-head RAG response function
-def multi_head_rag_response(query, temperature=0, max_tokens=200, top_n=10):
+    # Determine the specialized head based on the query content
     if "leave" in query.lower():
         head = "Leave Policy Expert"
     elif "ethics" in query.lower():
@@ -90,119 +76,85 @@ def multi_head_rag_response(query, temperature=0, max_tokens=200, top_n=10):
     else:
         head = "General Policy Expert"
 
-    retrieved_results = retrieve_vector_db(query, n_results=top_n)
-    context = ''.join([doc[0].page_content for doc in retrieved_results[:2]])
-
+    # Construct the RAG prompt with context
     prompt = f'''
     [INST]
     You are an expert in {head}. Give a detailed answer based on the context provided and also your training.
+
     Question: {query}
-    Context: {context}
+
+    Context : {context}
     [/INST]
     '''
 
-    completion = client.completions.create(
-        temperature=temperature,
-        max_tokens=max_tokens,
-        model="ft:gpt-3.5-turbo-0125:personal:fine-tune-gpt3-5-1:9AFEVLdj",
-        messages=[
-            {"role": "system", "content": f"You are an expert in {head}."},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return completion.choices[0].message.content
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": query})
+    
+    # Display the user message
+    with st.chat_message("user"):
+        st.markdown(query)
 
-# Function to check for vagueness
-def check_vagueness(answer):
-    vague_phrases = ["I am not sure", "it depends", "vague", "uncertain", "unclear"]
-    return any(phrase in answer.lower() for phrase in vague_phrases)
+    # Generate Normal RAG response
+    with st.chat_message("assistant"):
+        stream = client.chat.completions.create(
+            max_tokens=1500,
+            model=st.session_state["openai_model"],
+            messages=[{"role": "system", "content": prompt}],
+            stream=True
+        )
+        normal_response = st.write_stream(stream)
 
-# Retry if vague
-def retry_if_vague(query, model_function, max_attempts=3):
-    for attempt in range(max_attempts):
-        answer = model_function(query)
-        if not check_vagueness(answer):
-            return answer
-    return "Unable to generate a clear response."
+    # Append the assistant's Normal RAG response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": normal_response})
 
-# Calculate relevance score
-def calculate_relevance_score(query, response):
-    keywords = query.lower().split()
-    matches = sum([1 for word in keywords if word in response.lower()])
-    return matches / len(keywords)
+    # Check for vagueness
+    def check_vagueness(answer):
+        vague_phrases = ["I am not sure", "it depends", "vague", "uncertain", "unclear"]
+        return any(phrase in answer.lower() for phrase in vague_phrases)
 
-# Calculate clarity score
-def calculate_clarity(response):
-    length = len(response.split())
-    if 50 <= length <= 200:
-        return 1.0
-    elif length > 200:
-        return 0.7
-    else:
-        return 0.5
+    is_vague_normal = check_vagueness(normal_response)
 
-# Function to log comparison of responses
-def log_comparison(query, normal_rag_result, multi_head_result):
-    normal_relevance = calculate_relevance_score(query, normal_rag_result)
-    multi_head_relevance = calculate_relevance_score(query, multi_head_result)
+    # Score the response
+    def calculate_relevance_score(query, response):
+        keywords = query.lower().split()
+        matches = sum(1 for word in keywords if word in response.lower())
+        return matches / len(keywords)
 
-    normal_is_vague = check_vagueness(normal_rag_result)
-    multi_head_is_vague = check_vagueness(multi_head_result)
+    relevance_score_normal = calculate_relevance_score(query, normal_response)
 
-    normal_clarity = calculate_clarity(normal_rag_result)
-    multi_head_clarity = calculate_clarity(multi_head_result)
+    # Display Normal RAG vagueness and score metrics
+    st.markdown(f"**Normal RAG Vagueness Detected:** {'Yes' if is_vague_normal else 'No'}")
+    st.markdown(f"**Normal RAG Relevance Score:** {relevance_score_normal:.2f}")
 
-    st.write(f"Query: {query}\n")
+    # Generate Multi-Agent RAG response
+    with st.chat_message("assistant"):
+        multi_prompt = f'''
+        [INST]
+        You are an expert in {head}. Provide a detailed response based on the context and your training.
 
-    st.write("Normal RAG Response:")
-    st.write(f"Response: {normal_rag_result}")
-    st.write(f"Relevance Score: {normal_relevance:.2f}")
-    st.write(f"Vagueness Detected: {'Yes' if normal_is_vague else 'No'}")
-    st.write(f"Clarity Score: {normal_clarity:.2f}\n")
+        Question: {query}
 
-    st.write("Multi-head Agentic RAG Response:")
-    st.write(f"Response: {multi_head_result}")
-    st.write(f"Relevance Score: {multi_head_relevance:.2f}")
-    st.write(f"Vagueness Detected: {'Yes' if multi_head_is_vague else 'No'}")
-    st.write(f"Clarity Score: {multi_head_clarity:.2f}\n")
+        Context : {context}
+        [/INST]
+        '''
+        stream_multi = client.chat.completions.create(
+            max_tokens=1500,
+            model=st.session_state["openai_model"],
+            messages=[{"role": "system", "content": multi_prompt}],
+            stream=True
+        )
+        multi_response = st.write_stream(stream_multi)
 
-    st.write("Comparison Result:")
-    if normal_relevance > multi_head_relevance:
-        st.write("Normal RAG had a better relevance score.")
-    elif multi_head_relevance > normal_relevance:
-        st.write("Multi-head Agentic RAG had a better relevance score.")
-    else:
-        st.write("Both models had equal relevance scores.")
+    # Append the assistant's Multi-Agent RAG response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": multi_response})
 
-    if normal_is_vague and not multi_head_is_vague:
-        st.write("Multi-head Agentic RAG was less vague.")
-    elif multi_head_is_vague and not normal_is_vague:
-        st.write("Normal RAG was less vague.")
+    # Check for vagueness in Multi-Agent response
+    is_vague_multi = check_vagueness(multi_response)
+    relevance_score_multi = calculate_relevance_score(query, multi_response)
 
-    if normal_clarity > multi_head_clarity:
-        st.write("Normal RAG provided a clearer response.")
-    elif multi_head_clarity > normal_clarity:
-        st.write("Multi-head Agentic RAG provided a clearer response.")
-    else:
-        st.write("Both responses had similar clarity.")
+    # Display Multi-Agent RAG vagueness and score metrics
+    st.markdown(f"**Multi-Agent RAG Vagueness Detected:** {'Yes' if is_vague_multi else 'No'}")
+    st.markdown(f"**Multi-Agent RAG Relevance Score:** {relevance_score_multi:.2f}")
 
-# Streamlit app main function
-st.title('Capgemini Policy Chatbot')
-
-query = st.text_input("Enter your query:")
-if st.button("Get Responses"):
-    if query:
-        normal_response = retry_if_vague(query, normal_rag_response)
-        multi_head_response = retry_if_vague(query, multi_head_rag_response)
-
-        st.write("Normal RAG Response:")
-        st.write(normal_response)
-
-        st.write("\nMulti-head Agentic RAG Response:")
-        st.write(multi_head_response)
-
-        if st.button("Evaluate Responses"):
-            log_comparison(query, normal_response, multi_head_response)
-    else:
-        st.write("Please enter a query.")
+# End of code
 
