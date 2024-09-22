@@ -1,3 +1,7 @@
+# Ensure compatibility with SQLite
+__import__('pysqlite3')
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+
 import streamlit as st
 from openai import OpenAI
 import openai
@@ -7,9 +11,6 @@ from chromadb.utils import embedding_functions
 import os
 import sys
 
-# Ensure compatibility with SQLite
-__import__('pysqlite3')
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 # Initialize Chroma DB client
 chroma_client = chromadb.Client()
