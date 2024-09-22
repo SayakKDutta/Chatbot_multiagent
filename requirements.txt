@@ -3,7 +3,6 @@ openai
 chromadb
 langchain
 streamlit
-google-cloud-storage
 langchain_community
 pysqlite3-binary
 
