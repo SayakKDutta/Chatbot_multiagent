@@ -70,9 +70,16 @@ for message in st.session_state.messages:
 
 # Accept user input
 if query := st.chat_input("Enter your query here?"):
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": query})
+    with st.chat_message("user"):
+        st.markdown(query)
+
+    # Retrieve context
     retrieved_results = retrieve_vector_db(query, n_results=3)
     context = ''.join([doc[0].page_content for doc in retrieved_results[:2]])
 
+    # Determine the specialized head based on the query content
     if "leave" in query.lower():
         head = "Leave Policy Expert"
     elif "ethics" in query.lower():
@@ -92,13 +99,6 @@ if query := st.chat_input("Enter your query here?"):
     Context : {context}
     [/INST]
     '''
-
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": query})
-
-    # Display the user message
-    with st.chat_message("user"):
-        st.markdown(query)
 
     # Generate Normal RAG response
     with st.chat_message("assistant"):
