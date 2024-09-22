@@ -170,6 +170,3 @@ if query := st.chat_input("Enter your query here?"):
     # Display Multi-Agent RAG vagueness and score metrics
     st.markdown(f"**Multi-Agent RAG Vagueness Detected:** {'Yes' if is_vague_multi else 'No'}")
     st.markdown(f"**Multi-Agent RAG Relevance Score:** {relevance_score_multi:.2f}")
-
-
-dont make any other correction just add a progress bar for deployment 
