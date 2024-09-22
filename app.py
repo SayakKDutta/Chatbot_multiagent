@@ -32,7 +32,17 @@ class OpenAIEmbeddingFunction:
         return embeddings
 
 # Initialize OpenAI client
-client = openai(api_key=API_KEY)
+class OpenAIClient:
+    def __init__(self, api_key):
+        openai.api_key = api_key
+
+    def chat(self, *args, **kwargs):
+        return openai.ChatCompletion.create(*args, **kwargs)
+
+# Initialize the OpenAI client
+client = OpenAIClient(API_KEY)
+
+
 persist_directory = '/mount/src/Chatbot_multiagent/embeddings'
 
 # Initialize the Chroma DB client
