@@ -2,27 +2,27 @@ import streamlit as st
 from openai import OpenAI
 import openai
 from langchain.vectorstores import Chroma
-from langchain.embeddings import OpenAIEmbeddings
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-from langchain.chat_models import ChatOpenAI
-import pprint
+import chromadb
+from chromadb.utils import embedding_functions
 import os
 import sys
+
+# Ensure compatibility with SQLite
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
-import chromadb
-from chromadb import embedding_functions
 
-# Define your custom OpenAI Embedding function
+# Initialize Chroma DB client
+chroma_client = chromadb.Client()
+
+# Define your custom OpenAI embedding function
 class OpenAIEmbeddingFunction(embedding_functions.EmbeddingFunction):
     def __call__(self, texts):
-        # Check and limit the input size to avoid sending too much data
+        # Call the OpenAI embedding API
         response = openai.Embedding.create(
             input=texts,
-            model="text-embedding-ada-002"  # Use the OpenAI embedding model you prefer
+            model="text-embedding-ada-002"  # Use the preferred OpenAI model
         )
-        # Extract embeddings from the response
+        # Extract and return the embeddings from the response
         embeddings = [embedding['embedding'] for embedding in response['data']]
         return embeddings
 
@@ -30,32 +30,42 @@ class OpenAIEmbeddingFunction(embedding_functions.EmbeddingFunction):
 st.set_page_config(layout="wide")
 st.title("Emplochat")
 
+# Sidebar for API Key input
 with st.sidebar:
     API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
 
 # Initialize the OpenAI API Client
-client = OpenAI(api_key=API_KEY)
+openai.api_key = API_KEY
+
+# Initialize the Chroma DB store
 persist_directory = '/mount/src/Chatbot_multiagent/embeddings'
+collection_name = "Capgemini_policy_embeddings"
 
-# Initialize the Chroma DB client
-store = Chroma(persist_directory=persist_directory, collection_name="Capgemini_policy_embeddings")
+# Always use OpenAI embedding function
+embedding_function = OpenAIEmbeddingFunction()
 
-# Use your custom embedding function
-embed_prompt = OpenAIEmbeddingFunction()
+# Get or create the Chroma collection with OpenAI embedding function
+collection = chroma_client.get_or_create_collection(name=collection_name, embedding_function=embedding_function)
 
-# Define the embedding retrieval function
+# Example: Adding some data to the collection (assumed data and IDs)
+documents = ["Product 1 description", "Product 2 description", "Product 3 description"]
+ids = ["product_1", "product_2", "product_3"]
+
+# Add documents with embeddings to the collection only if they haven't been added yet
+if st.sidebar.button("Add Documents to Collection"):
+    collection.add(documents=documents, ids=ids)
+    st.sidebar.success("Documents added to the collection.")
+
+# Embedding retrieval function
 def retrieve_vector_db(query, n_results=2):
-    # Embed the query using the custom embedding function
-    query_embedding = embed_prompt([query])[0]  # Assuming a single query string
-    similar_embeddings = store.similarity_search_by_vector_with_relevance_scores(
+    # Embed the query using the OpenAI embedding function
+    query_embedding = embedding_function([query])[0]  # Assuming a single query string
+    similar_embeddings = collection.similarity_search_by_vector_with_relevance_scores(
         embedding=query_embedding, k=n_results)
     
     results = []
-    prev_embedding = []
     for embedding in similar_embeddings:
-        if embedding not in prev_embedding:
-            results.append(embedding)
-        prev_embedding = embedding
+        results.append(embedding)
     return results
 
 # Initialize session states for storing messages
@@ -92,7 +102,7 @@ if query := st.chat_input("Enter your query here?"):
 
     Question: {query}
 
-    Context : {context}
+    Context: {context}
     [/INST]
     '''
 
@@ -105,7 +115,7 @@ if query := st.chat_input("Enter your query here?"):
 
     # Generate Normal RAG response
     with st.chat_message("assistant"):
-        stream = client.chat.completions.create(
+        stream = openai.ChatCompletion.create(
             max_tokens=1500,
             model=st.session_state["openai_model"],
             messages=[{"role": "system", "content": prompt}],
@@ -143,10 +153,10 @@ if query := st.chat_input("Enter your query here?"):
 
         Question: {query}
 
-        Context : {context}
+        Context: {context}
         [/INST]
         '''
-        stream_multi = client.chat.completions.create(
+        stream_multi = openai.ChatCompletion.create(
             max_tokens=1500,
             model=st.session_state["openai_model"],
             messages=[{"role": "system", "content": multi_prompt}],
