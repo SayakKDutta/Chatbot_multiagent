@@ -169,7 +169,7 @@ if query := st.chat_input("Enter your query here?"):
 
     # Display Normal RAG vagueness and score metrics
     st.markdown(f"**Normal RAG Vagueness Detected:** {'Yes' if is_vague_normal else 'No'}")
-    st.markdown(f"**Normal RAG Content Coverage Score:** {content_coverage_normal:.2f}")
+    #st.markdown(f"**Normal RAG Content Coverage Score:** {content_coverage_normal:.2f}")
     st.markdown(f"**Normal RAG Comprehensiveness Score:** {comprehensiveness_normal:.2f}")
 
     # Generate Multi-Agent RAG response
@@ -199,5 +199,5 @@ if query := st.chat_input("Enter your query here?"):
 
     # Display Multi-Agent RAG vagueness and score metrics
     st.markdown(f"**Multi-Agent RAG Vagueness Detected:** {'Yes' if is_vague_multi else 'No'}")
-    st.markdown(f"**Multi-Agent RAG Content Coverage Score:** {content_coverage_multi:.2f}")
+    #st.markdown(f"**Multi-Agent RAG Content Coverage Score:** {content_coverage_multi:.2f}")
     st.markdown(f"**Multi-Agent RAG Comprehensiveness Score:** {comprehensiveness_multi:.2f}")
