@@ -4,7 +4,7 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import streamlit as st
 import openai
-from langchain_chroma import Chroma  # Updated import
+from langchain_community.vectorstores import Chroma # Updated import
 import os
 import time  # For simulating delays
 
