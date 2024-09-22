@@ -63,7 +63,7 @@ def retrieve_vector_db(query, n_results=2):
 
 # Initialize session states for storing messages
 if "openai_model" not in st.session_state:
-    st.session_state["openai_model"] = "ft:gpt-3.5-turbo-0125:personal:fine-tune-gpt3-5-1:9AFEVLdj"
+    st.session_state["openai_model"] = "ft:gpt-3.5-turbo-0125:personal::A9eKNr3q"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
