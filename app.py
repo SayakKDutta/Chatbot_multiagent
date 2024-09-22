@@ -4,7 +4,6 @@ __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 import streamlit as st
-from openai import OpenAI
 import openai
 from langchain_community.vectorstores import Chroma
 import chromadb
