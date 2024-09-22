@@ -1,11 +1,6 @@
 import streamlit as st
 from openai import OpenAI
-st.set_page_config(layout="wide")
-st.title("Emplochat")
-with st.sidebar:
-    API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
-
-
+import openai
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.chains import RetrievalQA
@@ -13,34 +8,48 @@ from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 import pprint
 import os
-
-
-__import__('pysqlite3')
 import sys
+__import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import chromadb
+from chromadb import embedding_functions
 
-###Enivironment settings for openai API key and Vector Embeddings############
+# Define your custom OpenAI Embedding function
+class OpenAIEmbeddingFunction(embedding_functions.EmbeddingFunction):
+    def __call__(self, texts):
+        # Check and limit the input size to avoid sending too much data
+        response = openai.Embedding.create(
+            input=texts,
+            model="text-embedding-ada-002"  # Use the OpenAI embedding model you prefer
+        )
+        # Extract embeddings from the response
+        embeddings = [embedding['embedding'] for embedding in response['data']]
+        return embeddings
 
+# Streamlit App Configuration
+st.set_page_config(layout="wide")
+st.title("Emplochat")
 
+with st.sidebar:
+    API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
 
-client = OpenAI(api_key=API_KEY)   
+# Initialize the OpenAI API Client
+client = OpenAI(api_key=API_KEY)
 persist_directory = '/mount/src/Chatbot_multiagent/embeddings'
 
-#########################Loading the Stored Vector embeddings################
-#Initialize the Chroma DB client
-store = Chroma(persist_directory=persist_directory,collection_name="Capgemini_policy_embeddings")
+# Initialize the Chroma DB client
+store = Chroma(persist_directory=persist_directory, collection_name="Capgemini_policy_embeddings")
 
-# Get all embeddings
-embeddings = store.get(include=['embeddings'])
-embed_prompt = OpenAIEmbeddings(API_KEY)
-
-###############################################################################
+# Use your custom embedding function
+embed_prompt = OpenAIEmbeddingFunction()
 
 # Define the embedding retrieval function
 def retrieve_vector_db(query, n_results=2):
+    # Embed the query using the custom embedding function
+    query_embedding = embed_prompt([query])[0]  # Assuming a single query string
     similar_embeddings = store.similarity_search_by_vector_with_relevance_scores(
-        embedding=embed_prompt.embed_query(query), k=n_results)
+        embedding=query_embedding, k=n_results)
+    
     results = []
     prev_embedding = []
     for embedding in similar_embeddings:
@@ -155,6 +164,3 @@ if query := st.chat_input("Enter your query here?"):
     # Display Multi-Agent RAG vagueness and score metrics
     st.markdown(f"**Multi-Agent RAG Vagueness Detected:** {'Yes' if is_vague_multi else 'No'}")
     st.markdown(f"**Multi-Agent RAG Relevance Score:** {relevance_score_multi:.2f}")
-
-# End of code
-
