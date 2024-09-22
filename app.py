@@ -32,7 +32,7 @@ class OpenAIEmbeddingFunction:
         return embeddings
 
 # Initialize OpenAI client
-client = OpenAI(api_key=API_KEY)
+client = openai(api_key=API_KEY)
 persist_directory = '/mount/src/Chatbot_multiagent/embeddings'
 
 # Initialize the Chroma DB client
