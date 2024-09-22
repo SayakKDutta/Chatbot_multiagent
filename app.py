@@ -154,8 +154,11 @@ if query := st.chat_input("Enter your query here?"):
 
     # Calculate Comprehensiveness Score
     def calculate_comprehensiveness_score(query, response):
-        length_ratio = len(response.split()) / len(query.split())
-        return length_ratio
+        max_length = max(len(query.split()), 1)  # Avoid division by zero
+        response_length = len(response.split())
+    # Scale the response length by the maximum expected length (the query in this case)
+        return min(response_length / max_length, 1.0)
+
 
     content_coverage_normal = calculate_content_coverage_score(query, normal_response)
     comprehensiveness_normal = calculate_comprehensiveness_score(query, normal_response)
