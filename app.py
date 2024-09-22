@@ -8,6 +8,7 @@ import openai
 from langchain_community.vectorstores import Chroma
 import chromadb
 from chromadb.utils import embedding_functions
+import numpy as np
 import os
 
 # Streamlit App Configuration
@@ -17,6 +18,10 @@ st.title("Emplochat")
 # Sidebar for API Key input
 with st.sidebar:
     API_KEY = st.text_input("OpenAI API Key", key="chatbot_api_key", type="password")
+
+if not API_KEY:
+    st.error("Please enter your OpenAI API Key.")
+    st.stop()
 
 # Define the embedding function
 class OpenAIEmbeddingFunction:
@@ -46,6 +51,19 @@ store = Chroma(persist_directory=persist_directory, collection_name="Capgemini_p
 
 embed_prompt = OpenAIEmbeddingFunction()
 
+# Precompute embeddings for heads
+heads_keywords = {
+    "Leave Policy Expert": ["leave", "absence", "vacation", "time off"],
+    "Business Ethics Expert": ["ethics", "integrity", "compliance", "conduct"],
+    "Human Rights Expert": ["human rights", "equality", "fairness", "justice"],
+    "General Policy Expert": ["policy", "guideline", "procedure", "standard"]
+}
+
+# Precompute embeddings for the heads
+heads_embeddings = {
+    head: embed_prompt(keywords) for head, keywords in heads_keywords.items()
+}
+
 # Define the embedding retrieval function
 def retrieve_vector_db(query, n_results=2):
     embedding_vector = embed_prompt([query])[0]
@@ -74,15 +92,24 @@ if query := st.chat_input("Enter your query here?"):
     retrieved_results = retrieve_vector_db(query, n_results=3)
     context = ''.join([doc[0].page_content for doc in retrieved_results[:2]])
 
-    # Determine the specialized head based on the query content
-    if "leave" in query.lower():
-        head = "Leave Policy Expert"
-    elif "ethics" in query.lower():
-        head = "Business Ethics Expert"
-    elif "human rights" in query.lower():
-        head = "Human Rights Expert"
-    else:
-        head = "General Policy Expert"
+    # Get the embedding for the user's query
+    query_embedding = embed_prompt([query])[0]
+
+    # Calculate cosine similarity
+    def cosine_similarity(vec_a, vec_b):
+        dot_product = np.dot(vec_a, vec_b)
+        norm_a = np.linalg.norm(vec_a)
+        norm_b = np.linalg.norm(vec_b)
+        return dot_product / (norm_a * norm_b) if norm_a and norm_b else 0.0
+
+    # Determine the specialized head based on cosine similarity
+    head_scores = {
+        head: cosine_similarity(query_embedding, head_embedding[0])
+        for head, head_embedding in heads_embeddings.items()
+    }
+
+    # Select the head with the highest score
+    head = max(head_scores, key=head_scores.get)
 
     prompt = f'''
     You are an expert in {head}. Give a detailed answer based on the context provided and your training.
