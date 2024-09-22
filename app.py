@@ -10,6 +10,7 @@ import chromadb
 from chromadb.utils import embedding_functions
 import os
 
+
 # Streamlit App Configuration
 st.set_page_config(layout="wide")
 st.title("Emplochat")
@@ -62,15 +63,10 @@ def retrieve_vector_db(query, n_results=2):
 
 # Initialize session states for storing messages
 if "openai_model" not in st.session_state:
-    st.session_state["openai_model"] = "ft:gpt-3.5-turbo-0125:personal::A9eKNr3q"
+    st.session_state["openai_model"] = "ft:gpt-3.5-turbo-0125:personal:fine-tune-gpt3-5-1:9AFEVLdj"
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
-# Display chat history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
 
 # Accept user input
 if query := st.chat_input("Enter your query here?"):
@@ -98,13 +94,6 @@ if query := st.chat_input("Enter your query here?"):
     [/INST]
     '''
 
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": query})
-
-    # Display the user message
-    with st.chat_message("user"):
-        st.markdown(query)
-
     # Generate Normal RAG response
     with st.chat_message("assistant"):
         stream = client.chat(
@@ -114,16 +103,17 @@ if query := st.chat_input("Enter your query here?"):
             stream=True
         )
         normal_response = st.write_stream(stream)
+        normal_response_text = ''.join(part['choices'][0]['delta']['content'] for part in normal_response)
 
     # Append the assistant's Normal RAG response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": normal_response})
+    st.session_state.messages.append({"role": "assistant", "content": normal_response_text})
 
-    # Check for vagueness
+    # Check for vagueness in Normal response
     def check_vagueness(answer):
         vague_phrases = ["I am not sure", "it depends", "vague", "uncertain", "unclear"]
         return any(phrase in answer.lower() for phrase in vague_phrases)
 
-    is_vague_normal = check_vagueness(normal_response)
+    is_vague_normal = check_vagueness(normal_response_text)
 
     # Score the response
     def calculate_relevance_score(query, response):
@@ -131,23 +121,20 @@ if query := st.chat_input("Enter your query here?"):
         matches = sum(1 for word in keywords if word in response.lower())
         return matches / len(keywords)
 
-    relevance_score_normal = calculate_relevance_score(query, normal_response)
-
-    # Display Normal RAG vagueness and score metrics
-    st.markdown(f"**Normal RAG Vagueness Detected:** {'Yes' if is_vague_normal else 'No'}")
-    st.markdown(f"**Normal RAG Relevance Score:** {relevance_score_normal:.2f}")
+    relevance_score_normal = calculate_relevance_score(query, normal_response_text)
 
     # Generate Multi-Agent RAG response
+    multi_prompt = f'''
+    [INST]
+    You are an expert in {head}. Provide a detailed response based on the context and your training.
+
+    Question: {query}
+
+    Context : {context}
+    [/INST]
+    '''
+
     with st.chat_message("assistant"):
-        multi_prompt = f'''
-        [INST]
-        You are an expert in {head}. Provide a detailed response based on the context and your training.
-
-        Question: {query}
-
-        Context : {context}
-        [/INST]
-        '''
         stream_multi = client.chat(
             max_tokens=1500,
             model=st.session_state["openai_model"],
@@ -155,14 +142,18 @@ if query := st.chat_input("Enter your query here?"):
             stream=True
         )
         multi_response = st.write_stream(stream_multi)
+        multi_response_text = ''.join(part['choices'][0]['delta']['content'] for part in multi_response)
 
     # Append the assistant's Multi-Agent RAG response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": multi_response})
+    st.session_state.messages.append({"role": "assistant", "content": multi_response_text})
 
     # Check for vagueness in Multi-Agent response
-    is_vague_multi = check_vagueness(multi_response)
-    relevance_score_multi = calculate_relevance_score(query, multi_response)
+    is_vague_multi = check_vagueness(multi_response_text)
+    relevance_score_multi = calculate_relevance_score(query, multi_response_text)
 
-    # Display Multi-Agent RAG vagueness and score metrics
-    st.markdown(f"**Multi-Agent RAG Vagueness Detected:** {'Yes' if is_vague_multi else 'No'}")
+    # Display both RAG results
+    st.markdown(f"### Normal RAG Vagueness Detected: {'Yes' if is_vague_normal else 'No'}")
+    st.markdown(f"**Normal RAG Relevance Score:** {relevance_score_normal:.2f}")
+
+    st.markdown(f"### Multi-Agent RAG Vagueness Detected: {'Yes' if is_vague_multi else 'No'}")
     st.markdown(f"**Multi-Agent RAG Relevance Score:** {relevance_score_multi:.2f}")
