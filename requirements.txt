@@ -5,5 +5,6 @@ langchain
 streamlit
 langchain_community
 pysqlite3-binary
+sentence_transformers
 
 
