@@ -1,7 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 import openai
-from langchain.vectorstores import Chroma
+from langchain_community.vectorstores import Chroma
 import chromadb
 from chromadb.utils import embedding_functions
 import os
