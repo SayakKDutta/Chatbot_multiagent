@@ -154,8 +154,8 @@ if query := st.chat_input("Enter your query here?"):
 
     # Calculate Comprehensiveness Score
     def calculate_comprehensiveness_score(query, response):
-    max_length = max(len(query.split()), 1)  # Avoid division by zero
-    response_length = len(response.split())
+        max_length = max(len(query.split()), 1)  # Avoid division by zero
+        response_length = len(response.split())
     # Normalize the response length based on a maximum expected length
     # Here, you can define an arbitrary maximum length for normalization
     # For example, if you expect responses to not exceed 200 words
